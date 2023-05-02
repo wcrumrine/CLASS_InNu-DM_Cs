@@ -1,0 +1,172 @@
+CHANGES TO CLASS v8.2.2
+--------------------------------------------------
+
+A. HEADER CHANGES
+==============================
+
+1. Background header
+------------------------------
+* add a new species of interacting DM
+l. 60:   double Omega0_nudm;
+l. 86:   double u_ur;
+l. 111:  double * u_ncdmdm;
+l. 185:  int index_bg_rho_nudm;
+l. 207:  int index_bg_A_nudm1;
+l. 295:  short has_nudm;
+l. 304:  short has_urdm_interactions;
+l. 305:  short has_ncdm_dm_interactions;
+l. 325:  double ** C_nudm; nu-dm interaction rate
+l. 326   double ** f0_ncdm; nu distribution function
+l. 554:  #define _sigma_ 6.6524616e-29 /**< Thomson cross-section in m^2 *
+
+2. Thermodynamics header
+------------------------------
+
+3. Perturbations header
+------------------------------
+* add nudm species to the structure "perturbs"
+
+l. 231:  short has_source_delta_nudm;
+l. 244:  short has_source_theta_nudm;
+l. 276:  int index_tp_delta_nudm;
+l. 292:  int index_tp_theta_nudm;
+
+* add nudm species to the structure "perturb_vector"
+l. 450:  int index_pt_delta_nudm;
+l. 452:  int index_pt_theta_nudm;
+
+* add integrated interaction rate to "perturb_workspace"
+l. 562:  double * C_nudm;
+l. 563:  double * nudm_interaction_term;
+
+
+B. MODULE CHANGES
+==============================
+
+1. Input module
+------------------------------
+* in function "input_read_parameters"
+l. 835 ff: read in ur-DM interation strength and set interaction switch
+l. 859 ff: read in Omega_nudm or omega_nudm and assign value to pba->Omega0_nudm
+l. 965 ff: read in vector of nu-dm interaction strengths and set switch
+
+* in function "input_default_parameters"
+l. 2968:   pba->Omega0_nudm = 0.
+l. 2995 f: add pba->Omega0_nudm in the computation of pba->Omega0_lambda
+
+
+2. Background module
+------------------------------
+* in function "background_functions"
+l. 323 f: compute current density of nudm according to scalefactor
+l. 401:   calculate A_nudm1
+
+* in function background_w_fld
+l. 542:   add nudm species to non-relativistic matter budget
+
+* in function "background_indices"
+l. 860: pba->has_nudm = _FALSE_;
+l. 873: set pba->has_nudm to TRUE if Omega0_nudm != 0.
+l. 933: define index for index_bg_A_nudm1
+l. 942: define index for index_bg_rho_nudm
+
+*in function "background_ncdm_init"
+l. 1272: allocate pointers to C_nudm and f0_ncdm vectors
+l. 1411: allocate C_nudm and f0_ncdm vectors
+
+* in function "background_output_titles"
+l. 2222: add column title for rho_nudm
+l. 2232: add column title for A_nudm
+
+* in function "background_output_data"
+l. 2282: store value of rho_nudm
+l. 2290: store value of A_nudm
+
+* in function "background_derivs"
+l. 2903 ff: add rho_nudm to the total non-relativistic matter density
+
+* in function "background_output_budget"
+l. 2579 ff: add nudm species to the matter budget
+
+3. Themodynamics module
+------------------------------
+* in function "thermodynamics_onthespot_energy_injection"
+-> do not account for the nudm species
+
+* in function "thermodynamics_energy_injection"
+-> do not account for the nudm species
+
+* in function "thermodynamics_recombination_with_hyrec"
+l. 2741: add Omega0_nudm to the matter density
+
+4. Perturbations module
+------------------------------
+* in function "perturb_output_data"
+l. 231:   store value of delta_nudm
+l. 258:   store value of theta_nudm
+l. 278:   rescale delta_nudm for CAMB format output
+
+* in function "perturb_output_titles"
+l. 321:   store column title d_nudm
+l. 349:   store column title t_nudm
+l. 369:   store column title for CAMB format	-> I AM NOT 100% SURE ABOUT THE IMPLEMENTATION
+   	  	       	     	      		-> CHECK OUTPUT WO/ nudm COMPONENT
+
+* in function "perturb_init"
+l. 545 f: test if required transfers are available for nudm-ncdm interaction
+
+* in function "perturb_indices_of_perturb"
+l. 1026:    ppt->has_source_detla_nudm = _FALSE_; (initialisation)
+l. 1039:    ppt->has_source_theta_nudm = _FASLE_; (initialisation)
+l. 1126 f:  set has_source_detla_nudm to TRUE if nudm is present
+l. 1155 f:  set has_source_theta_nudm to TRUE if nudm is present -> no check for gauge
+l. 1231:    define index_tp_delta_nudm
+l. 1244:    define index_tp_theta_nudm
+
+* in function "perturb_workspace_init"
+l. 2573:    allocate ppw->nudm_interaction_term[n_nudm] and ppw->C_nudm
+
+* in function "perturb_prepare_k_output"
+l. 3077 f:  add column titles for delta_nudm and theta_nudm
+
+* in function "perturb_vector_init"
+l. 3650 f:  define index_pt_delta_dcdm and index_pt_theta_dcdm
+l. 4057 f:  treat approximation swithcing for nudm component (assuming it is not affected by any approximation scheme)
+
+* in function "perturb_initial_conditions"
+l. 4689 ff: add nudm density to total matter density
+l. 4792 ff: assign initial delta_nudm in synchronous gauge (for later gauge transformation)
+-> do not include isocurvature petrurbations
+l. 5017:    if nudm is the only dm component use it to determine delta_cdm for the gauge transformation
+l. 5040 ff: assign initial conditions for delta_nudm and theta_nudm in Newtonian gauge
+
+* in function "perturb_total_stress_energy"
+l. 5911:    allocate C_nudm, C_nudm_int, divisor_int
+l. 6055 ff: add nudm perturbations to the total stress-energy perturbations
+l. 6157 ff: calculate ppw->nudm_interaction_term[n_nudm] (in fluid approx)
+l. 6181:    calculate integrated nudm interactions
+l. 6214:    calculate ppw->nudm_interaction_term[n_nudm]
+
+* in function "perturb_sources"
+-> do not modify the metric potentials in synchronous gauge
+l. 6852 ff: set delta_nudm source
+l. 6957 ff: set theta_nudm source
+
+* in function "perturb_print_variables"
+l. 7106:   double delta_nudm=0., theta_nudm=0.;
+l. 7262:   assign values to the new variables
+l. 7406:   convert to netonian variables if gauge is synchronous
+l. 7470 f:  store the values of delta_nudm and theta_nudm
+
+* in function "perturb_derivs"
+l. 7713:    allocate C_nudm
+l. 8062 ff: time derivatived of delta_nudm and theta_nudm in Newtonian gauge (NO INTERACTIONS)
+l. 8068 ff: added nudm interactions
+l. 8339 ff: interaction term for ncdm in fluid approximation
+l. 8359 ff: interaction terms for ncdm in the full Boltzmann equation
+
+C. PYTHON CHANGES
+==============================
+1. Setup.py
+l. 38: added "/usr/include"
+l. 40: added "/usr/lib/x86_64-linux-gnu"
