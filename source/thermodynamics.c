@@ -663,6 +663,23 @@ int thermodynamics_init(
     }
   }
 
+  /* compute c2_nudm and T_idm... changes added by Wendy */
+  if(pba->has_nudm==_TRUE_){
+    for (index_tau=0; index_tau < pth->tt_size; index_tau++) {
+      pth->thermodynamics_table[index_tau*pth->th_size+pth->index_th_c2_nudm]
+  = ptdw->dmu_urDM;
+    }
+  }
+
+  if(pba->has_nudm==_TRUE_){
+    for (index_tau=0; index_tau < pth->tt_size; index_tau++) {
+      pth->thermodynamics_table[index_tau*pth->th_size+pth->index_th_T_nudm]
+  = ptdw->T_nudm;
+    }
+  }
+
+  /* End Wendy Changes */
+
   free(tau_table);
 
   /** - --> compute visibility: \f$ g= (d \kappa/d \tau) e^{- \kappa} \f$ */
@@ -3908,3 +3925,78 @@ int thermodynamics_tanh(double x,
 
   return _SUCCESS_;
 }
+
+
+/** Added By Wendy
+ * 
+ * This routine computes the quantities connected to interacting dark
+ * matter with photons, baryons & dark radiation (idm), and interacting dark radiation (idr)
+ *
+ * @param pba          Input: pointer to background structure
+ * @param z            Input: redshift
+ * @param y            Input: vector of evolver quantities
+ * @param dy           Input: derivative of this vector
+ * @param pth          Input: pointer to thermodynamics structure
+ * @param ptw          Input/Output: pointer to thermo workspace
+ * @param pvecback     Input: vector of background quantities
+ *
+ * @return the error status
+ *
+ */
+int thermodynamics_idm_quantities(struct background * pba,
+                                  double z,
+                                  double * y,
+                                  double * dy,
+                                  struct thermodynamics * pth,
+                                  struct thermo_workspace * ptw,
+                                  double * pvecback){
+  /** Summary: */
+
+  /** Define local variables */
+  struct thermo_diffeq_workspace * ptdw = ptw->ptdw;
+  struct thermo_vector * ptv = ptdw->ptv;
+
+  /* Thermo quantities */
+  double T_g;
+
+  T_g = ptw->T_cmb * (1.+z);
+
+  /** - Now deal with any required dark matter (and its interactions) */
+  if (pba->has_nudm == _TRUE_) {
+    /* First, set the IDM temperature in tight coupling */
+    if (ppw->approx[ppw->index_ap_tca] == (int)tca_on) {
+      ptdw->T_nudm = T_g;
+    }
+
+    /* Also set idm temperature without tight coupling */
+    else {
+      ptdw->T_nudm = y[ptv->index_ti_T_idm];
+    }
+
+    /* Compute idm temperature derivatives, starting with homogeneous expansion */
+    ptdw->T_nudm_prime = - 2. * ptdw->T_nudm / (1.+z);
+
+    /* Now add also coupling to photons*/
+    if (pth->has_coupling_urDM == _TRUE_) {
+      /* - interaction rate with massless neutrinos */
+      ptdw->dmu_urDM = 3./8./_PI_/_G_*pow(1.+z, 2+pth->n_urDM)*pba->Omega0_nudm*pba->H0*pba->H0*pth->u_urDM_0*pow(_c_,4)*_sigma_/1.e11/_eV_/_Mpc_over_m_;
+      ptdw->T_nudm_prime += - 2.*4./3. * pvecback[pba->index_bg_rho_nudm]/pvecback[pba->index_bg_rho_ur] * ptdw->dmu_urDM * (ptdw->T_nudm  - T_g) / pvecback[pba->index_bg_H];
+    }
+
+    /* Now conclude by computing the sound speed */
+    ptdw->c2_nudm = _k_B_ /(pth->m_idm*_eV_)  * (ptdw->T_nudm - (1.+z)/3. * ptdw->T_nudm_prime);
+  }
+
+
+  return _SUCCESS_;
+}
+
+/**
+ * Check if the initial integration time and spacing needs adjusting, for example for interacting dark matter
+ *
+ * @param ppr   Input: pointer to precision structure
+ * @param pba   Input: pointer to background structure
+ * @param pth   Input: pointer to thermo structure
+ * @param ptw   Input/Output: pointer to thermo workspace
+ * @return the error status
+ */
