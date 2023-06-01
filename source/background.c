@@ -484,6 +484,17 @@ int background_functions(
   /** - compute relativistic density to total density ratio */
   pvecback[pba->index_bg_Omega_r] = rho_r / rho_crit;
 
+  /** - make place holders for dmeff (nudm that interacts with massless neutrinos) quantities that are computed in thermodynamics - ADDED BY WENDY */
+  if (pba->has_urdm_interactions == _TRUE_) {
+    pvecback[pba->index_bg_Tdmeff]        = pba->T_cmb / a;
+    /*pvecback[pba->index_bg_dkappa_dmeff]  = 0.;
+    pvecback[pba->index_bg_dkappaT_dmeff] = 0.; */
+    pvecback[pba->index_bg_cdmeff2]       = 0.;
+    /*pvecback[pba->index_bg_Vrel_dmeff]    = pba->Vrel_dmeff;
+    if((1./a - 1.) < 1000.){ // if z<1000, scale Vrms by (1+z)
+      pvecback[pba->index_bg_Vrel_dmeff] *= (1./a) / 1001.; // (1+z)/(1+1000) */
+  }
+
   /** - compute other quantities in the exhaustive, redundant format */
   if (return_format == pba->long_info) {
 
@@ -933,6 +944,7 @@ int background_indices(
   /* - index for rho_nudm */
   class_define_index(pba->index_bg_rho_nudm, pba->has_nudm, index_bg,1);
 
+
   /* - indices for ncdm. We only define the indices for ncdm1
      (density, pressure, pseudo-pressure), the other ncdm indices
      are contiguous */
@@ -940,6 +952,12 @@ int background_indices(
   class_define_index(pba->index_bg_p_ncdm1,pba->has_ncdm,index_bg,pba->N_ncdm);
   class_define_index(pba->index_bg_pseudo_p_ncdm1,pba->has_ncdm,index_bg,pba->N_ncdm);
   class_define_index(pba->index_bg_A_nudm1,pba->has_nudm,index_bg,pba->N_ncdm);
+
+  /* - index for Tdmeff (temp of nudm, DM that interacts with massless neutrinos) - ADDED BY WENDY */
+  class_define_index(pba->index_bg_Tdmeff,pba->has_urdm_interactions,index_bg,1);
+
+  /* - index for dmeff speed of sound squared (sound speed of nudm, DM that interacts with massless neutrinos) - ADDED BY WENDY */
+  class_define_index(pba->index_bg_cdmeff2,pba->has_urdm_interactions,index_bg,1);
 
   /* - index for dcdm */
   class_define_index(pba->index_bg_rho_dcdm,pba->has_dcdm,index_bg,1);
@@ -2255,6 +2273,8 @@ int background_output_titles(struct background * pba,
       }
     }
   }
+  class_store_columntitle(titles,"T_dmeff",pba->has_urdm_interactions); /* Added by WENDY */
+  class_store_columntitle(titles,"cdmeff2",pba->has_urdm_interactions); /* Added by WENDY */
   class_store_columntitle(titles,"(.)rho_lambda",pba->has_lambda);
   class_store_columntitle(titles,"(.)rho_fld",pba->has_fld);
   class_store_columntitle(titles,"(.)w_fld",pba->has_fld);
@@ -2316,6 +2336,8 @@ int background_output_data(
         }
       }
     }
+    class_store_double(dataptr,pvecback[pba->index_bg_Tdmeff],pba->has_urdm_interactions,storeidx); /* ADDED BY WENDY */
+    class_store_double(dataptr,pvecback[pba->index_bg_cdmeff2],pba->has_urdm_interactions,storeidx); /* ADDED BY WENDY */
     class_store_double(dataptr,pvecback[pba->index_bg_rho_lambda],pba->has_lambda,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_rho_fld],pba->has_fld,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_w_fld],pba->has_fld,storeidx);

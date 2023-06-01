@@ -61,6 +61,8 @@ struct background
 
   double f_nudm;
 
+  double m_dmeff; /**< \f$ m_{dmeff} \f$ : mass of dark matter with interactions with massless neutrinos - ADDED BY WENDY */
+
   double Omega0_lambda; /**< \f$ \Omega_{0_\Lambda} \f$: cosmological constant */
 
   double Omega0_fld; /**< \f$ \Omega_{0 de} \f$: fluid */
@@ -207,6 +209,9 @@ struct background
   int index_bg_p_ncdm1;       /**< pressure of first ncdm species (others contiguous) */
   int index_bg_pseudo_p_ncdm1;/**< another statistical momentum useful in ncdma approximation */
   int index_bg_A_nudm1;       /**< momentum independent part of the interaction rate between massive neutrinos and nudm */
+
+  int index_bg_Tdmeff;        /**< dmeff (temp of DM interacting with massless neutrino, aka temp of nudm) */
+  int index_bg_cdmeff2;       /**< dmeff (DM interacting with massless neutrino) speed of sound squared \f$ c_{dmeff}^2 \f$ */
 
   int index_bg_rho_tot;       /**< Total density */
   int index_bg_p_tot;         /**< Total pressure */

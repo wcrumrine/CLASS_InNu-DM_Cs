@@ -182,13 +182,6 @@ int thermodynamics_at_z(
     /* in this regime, variation rate = dkappa/dtau */
     pvecthermo[pth->index_th_rate] = pvecthermo[pth->index_th_dkappa];
 
-    /* Quantities related to nudm added by Wendy */
-    if (pba->has_nudm == _TRUE_) {
-      pvecthermo[pth->index_th_T_nudm] = pba->T_cmb* (1+z);
-      pvecthermo[pth->index_th_c2_nudm] = _k_B_ * pba->T_cmb*(1+z)/(pth->m_idm*_eV_)  * (1 - (1.+z)/3./pvecback[pba->index_bg_H]);
-    }  
-    /* End of changes added by Wendy */
-
   }
 
   /** - interpolate in table with array_interpolate_spline() (normal
@@ -353,7 +346,7 @@ int thermodynamics_init(
              pth->error_message,
              "characteristic annihilation redshift cannot be negative");
 
-  class_test((pth->annihilation>0)&&(pba->has_cdm==_FALSE_),
+  class_test((pth->annihilation>0) && (pba->has_cdm==_FALSE_), 
              pth->error_message,
              "CDM annihilation effects require the presence of CDM!");
 
@@ -377,7 +370,7 @@ int thermodynamics_init(
              pth->error_message,
              "decay parameter cannot be negative");
 
-  class_test((pth->decay>0)&&(pba->has_cdm==_FALSE_),
+  class_test((pth->decay>0)&&(pba->has_cdm==_FALSE_), 
              pth->error_message,
              "CDM decay effects require the presence of CDM!");
 
@@ -405,7 +398,7 @@ int thermodynamics_init(
 
   /** - assign values to all indices in the structures with thermodynamics_indices()*/
 
-  class_call(thermodynamics_indices(pba,pth,preco,preio),
+  class_call(thermodynamics_indices(pth,preco,preio),
              pth->error_message,
              pth->error_message);
 
@@ -455,6 +448,45 @@ int thermodynamics_init(
   /** - store initial value of conformal time in the structure */
 
   pth->tau_ini = tau_table[pth->tt_size-1];
+
+  /** - Initialize dmeff - ADDED BY WENDY */
+
+  if (pth->has_coupling_urDM == _TRUE_){
+
+    /* Initialize zdec to something unphysical. */
+    pth->z_dmeff_decoupling = -1.0;
+
+    /* fill dTb by splining, use Tdmeff as temporary place holder for 2nd derivative of Tb 
+    * REMOVED BY WENDY - we aren't updating baryon temperature due to interactions
+    class_call(array_spline_table_line_to_line(tau_table,
+                                               pth->tt_size,
+                                               pth->thermodynamics_table,
+                                               pth->th_size,
+                                               pth->index_th_Tb,
+                                               pth->index_th_Tdmeff,
+                                               _SPLINE_EST_DERIV_,
+                                               pth->error_message),
+               pth->error_message,
+               pth->error_message);
+
+    class_call(array_derive_spline_table_line_to_line(tau_table,
+                                                      pth->tt_size,
+                                                      pth->thermodynamics_table,
+                                                      pth->th_size,
+                                                      pth->index_th_Tb,
+                                                      pth->index_th_Tdmeff,
+                                                      pth->index_th_dTb,
+                                                      pth->error_message),
+               pth->error_message,
+               pth->error_message);
+    * End Removal by Wendy */
+
+    /* integrate dmeff temperature over same range in z as background quantities */
+    class_call(thermodynamics_dmeff_temperature(ppr,pba,pth),
+               pth->error_message,
+               pth->error_message);
+  }
+  /** End Changes by WENDY */
 
   /** - fill missing columns (quantities not computed previously but related) */
 
@@ -662,23 +694,6 @@ int thermodynamics_init(
 	*pow(_c_,4)*_sigma_/1.e11/_eV_/_Mpc_over_m_;
     }
   }
-
-  /* compute c2_nudm and T_idm... changes added by Wendy */
-  if(pba->has_nudm==_TRUE_){
-    for (index_tau=0; index_tau < pth->tt_size; index_tau++) {
-      pth->thermodynamics_table[index_tau*pth->th_size+pth->index_th_c2_nudm]
-  = ptdw->dmu_urDM;
-    }
-  }
-
-  if(pba->has_nudm==_TRUE_){
-    for (index_tau=0; index_tau < pth->tt_size; index_tau++) {
-      pth->thermodynamics_table[index_tau*pth->th_size+pth->index_th_T_nudm]
-  = ptdw->T_nudm;
-    }
-  }
-
-  /* End Wendy Changes */
 
   free(tau_table);
 
@@ -898,6 +913,10 @@ int thermodynamics_init(
   /** - if verbose flag set to next-to-minimum value, print the main results */
 
   if (pth->thermodynamics_verbose > 0) {
+
+    if(pth->has_coupling_urDM == _TRUE_){
+      printf(" -> dmeff couples from neutrinos at z=%e\n",pth->z_dmeff_decoupling); /* Added by Wendy */
+    }
     printf(" -> recombination at z = %f (max of visibility function)\n",pth->z_rec);
     printf("    corresponding to conformal time = %f Mpc\n",pth->tau_rec);
     printf("    with comoving sound horizon = %f Mpc\n",pth->rs_rec);
@@ -973,7 +992,6 @@ int thermodynamics_free(
  */
 
 int thermodynamics_indices(
-                           struct background * pba,
                            struct thermo * pth,
                            struct recombination * preco,
                            struct reionization * preio
@@ -1030,25 +1048,37 @@ int thermodynamics_indices(
     index++;
   }
 
-  if (pth->has_coupling_urDM==_TRUE_){
+  /*dmeff quantities */
+  if(pth->has_coupling_urDM==_TRUE_){
     pth->index_th_dmu_urDM = index;
     index++;
-  }  
+    /* Added by Wendy */
+    pth->index_th_Tdmeff = index;
+    index++;
+    pth->index_th_cdmeff2 = index;
+    index++;
 
-  /* Wendy added DM sound speed and temperature*/
-  if (pba->has_nudm == _TRUE_) {
-      pth->index_th_c2_nudm = index;
-      index++;
-    }  
+    /* End of Added by Wendy */
+  }
 
-  if (pba->has_nudm == _TRUE_) {
-      pth->index_th_T_nudm = index;
-      index++;
-    } 
-  /*End of Wendy changes*/
+
 
   /* end of indices */
   pth->th_size = index;
+
+
+  /** - initialization of indices for dmeff temperature integration  - ADDED BY WENDY*/
+  if(pth->has_coupling_urDM==_TRUE_){
+    index = 0;
+
+    pth->index_ti_Tdm = index;
+    index++;
+    pth->index_ti_tau = index; // must be the last index
+    index++;
+
+    pth->ti_size = index;
+  }
+
 
   /** - initialization of all indices and flags in recombination structure */
   index = 0;
@@ -3844,8 +3874,8 @@ int thermodynamics_output_titles(struct background * pba,
   //class_store_columntitle(titles,"kappa''",_TRUE_);
   //class_store_columntitle(titles,"kappa'''",_TRUE_);
   class_store_columntitle(titles, "dmu_urDM [Mpc^-1]", pth->has_coupling_urDM);
-  class_store_columntitle(titles, "c2_nudm", pba->has_nudm); //Wendy Change
-  class_store_columntitle(titles, "T_nudm", pba->has_nudm); //Wendy Change
+  class_store_columntitle(titles, "Tdmeff", pth->has_coupling_urDM); /* Added by Wendy */
+  class_store_columntitle(titles, "cdmeff2", pth->has_coupling_urDM); /* Added by Wendy */
   class_store_columntitle(titles,"exp(-kappa)",_TRUE_);
   class_store_columntitle(titles,"g [Mpc^-1]",_TRUE_);
   //class_store_columntitle(titles,"g'",_TRUE_);
@@ -3896,8 +3926,9 @@ int thermodynamics_output_data(struct background * pba,
     //class_store_double(dataptr,pvecthermo[pth->index_th_ddkappa],_TRUE_,storeidx);
     //class_store_double(dataptr,pvecthermo[pth->index_th_dddkappa],_TRUE_,storeidx);
     class_store_double(dataptr,pvecthermo[pth->index_th_dmu_urDM],pth->has_coupling_urDM,storeidx);
-    class_store_double(dataptr,pvecthermo[pth->index_th_c2_nudm],pba->has_nudm,storeidx); //Wendy Change
-    class_store_double(dataptr,pvecthermo[pth->index_th_T_nudm],pba->has_nudm,storeidx); //wendy Change
+    class_store_double(dataptr,pvecthermo[pth->index_th_Tdmeff],pth->has_coupling_urDM,storeidx); /* Added by Wendy */
+    class_store_double(dataptr,pvecthermo[pth->index_th_cdmeff2],pth->has_coupling_urDM,storeidx); /* Added by Wendy */
+
     class_store_double(dataptr,pvecthermo[pth->index_th_exp_m_kappa],_TRUE_,storeidx);
     class_store_double(dataptr,pvecthermo[pth->index_th_g],_TRUE_,storeidx);
     //class_store_double(dataptr,pvecthermo[pth->index_th_dg],_TRUE_,storeidx);
@@ -3927,76 +3958,351 @@ int thermodynamics_tanh(double x,
 }
 
 
-/** Added By Wendy
- * 
- * This routine computes the quantities connected to interacting dark
- * matter with photons, baryons & dark radiation (idm), and interacting dark radiation (idr)
+/* The following two functions were added by Wendy on May 30, 2023, taken from latest DMEFF version 
+* IMPORTANT NOTE. DMEFF now refers to DM that interacts with MASSLESS NEUTRINOS rather than baryons. */
+
+/**
+ *  Subroutine evaluating the derivative with respect to conformal time
+ *  of dmeff quantities.
  *
- * @param pba          Input: pointer to background structure
- * @param z            Input: redshift
- * @param y            Input: vector of evolver quantities
- * @param dy           Input: derivative of this vector
- * @param pth          Input: pointer to thermodynamics structure
- * @param ptw          Input/Output: pointer to thermo workspace
- * @param pvecback     Input: vector of background quantities
+ * This is one of the few functions in the code which is passed to
+ * the generic_integrator() routine.  Since generic_integrator()
+ * should work with functions passed from various modules, the format
+ * of the arguments is a bit special:
  *
- * @return the error status
+ * - fixed input parameters and workspaces are passed through a generic
+ * pointer. Here, this is just a pointer to the background structure
+ * and to a background vector, but generic_integrator() doesn't know
+ * its fine structure.
  *
+ * - the error management is a bit special: errors are not written as
+ * usual to pba->error_message, but to a generic error_message passed
+ * in the list of arguments.
+ *
+ * @param tau                      Input: conformal time
+ * @param y                        Input: vector of variable
+ * @param dy                       Output: its derivative (already allocated)
+ * @param parameters_and_workspace Input: pointer to fixed parameters (e.g. indices)
+ * @param error_message            Output: error message
  */
-int thermodynamics_idm_quantities(struct background * pba,
-                                  double z,
-                                  double * y,
-                                  double * dy,
-                                  struct thermodynamics * pth,
-                                  struct thermo_workspace * ptw,
-                                  double * pvecback){
-  /** Summary: */
 
-  /** Define local variables */
-  struct thermo_diffeq_workspace * ptdw = ptw->ptdw;
-  struct thermo_vector * ptv = ptdw->ptv;
+int thermodynamics_dmeff_derivs(double tau,
+                                double *y,
+                                double *dy,
+                                void * parameters_and_workspace,
+                                ErrorMsg error_message){
 
-  /* Thermo quantities */
-  double T_g;
+  struct thermodynamics_parameters_and_workspace * ptpaw;
+  struct background * pba;
+  struct thermo *pth;
+  double * pvecback;
+  double * pvecthermo;
+  double a,H,z;
+  double T_ur;
+  int last_index;
 
-  T_g = ptw->T_cmb * (1.+z);
+  ptpaw = parameters_and_workspace;
+  pba  = ptpaw->pba;
+  pth  = ptpaw->pth;
+  pvecback   = ptpaw->pvecback;
+  pvecthermo = ptpaw->pvecthermo;
 
-  /** - Now deal with any required dark matter (and its interactions) */
-  if (pba->has_nudm == _TRUE_) {
-    /* First, set the IDM temperature in tight coupling */
-    if (ppw->approx[ppw->index_ap_tca] == (int)tca_on) {
-      ptdw->T_nudm = T_g;
-    }
+  /* Extract background. */
+  class_call(background_at_tau(pba,
+                               tau,
+                               pba->normal_info,
+                               pba->inter_normal,
+                               &last_index,
+                               pvecback),
+             pba->error_message,
+             pth->error_message);
 
-    /* Also set idm temperature without tight coupling */
-    else {
-      ptdw->T_nudm = y[ptv->index_ti_T_idm];
-    }
+  a = pvecback[pba->index_bg_a];
+  H = pvecback[pba->index_bg_H];
+  z = 1./a - 1.;
 
-    /* Compute idm temperature derivatives, starting with homogeneous expansion */
-    ptdw->T_nudm_prime = - 2. * ptdw->T_nudm / (1.+z);
+  
+  /* BEGIN WENDY REMOVAL
+  /* Extract thermodynamics. Table has been splined in thermodynamics_dmeff_temperature. 
 
-    /* Now add also coupling to photons*/
-    if (pth->has_coupling_urDM == _TRUE_) {
-      /* - interaction rate with massless neutrinos */
-      ptdw->dmu_urDM = 3./8./_PI_/_G_*pow(1.+z, 2+pth->n_urDM)*pba->Omega0_nudm*pba->H0*pba->H0*pth->u_urDM_0*pow(_c_,4)*_sigma_/1.e11/_eV_/_Mpc_over_m_;
-      ptdw->T_nudm_prime += - 2.*4./3. * pvecback[pba->index_bg_rho_nudm]/pvecback[pba->index_bg_rho_ur] * ptdw->dmu_urDM * (ptdw->T_nudm  - T_g) / pvecback[pba->index_bg_H];
-    }
+  if(tau > pth->tau_ini){
+    class_call(array_interpolate_spline(pth->z_table,
+                                        pth->tt_size,
+                                        pth->thermodynamics_table,
+                                        pth->d2thermodynamics_dz2_table,
+                                        pth->th_size,
+                                        z,
+                                        &last_index,
+                                        pvecthermo,
+                                        pth->th_size,
+                                        pth->error_message),
+               pth->error_message,
+               pth->error_message);
+  } else {
+    pvecthermo[pth->index_th_Tb] = pba->T_cmb / a;
+    pvecthermo[pth->index_th_dTb] = -pba->T_cmb * H;
+    pvecthermo[pth->index_th_xe] = 1. + 2.*pth->YHe / (_not4_ * (1.-pth->YHe));
+  }
+  END WENDY REMOVAL */
 
-    /* Now conclude by computing the sound speed */
-    ptdw->c2_nudm = _k_B_ /(pth->m_idm*_eV_)  * (ptdw->T_nudm - (1.+z)/3. * ptdw->T_nudm_prime);
+  pvecthermo[pth->index_th_Tdmeff] = y[pth->index_ti_Tdm];
+
+  /* BEGIN WENDY REMOVAL
+
+  /* Obtain momentum and energy exchange rates. 
+
+  class_call(thermodynamics_dmeff_rate(pba,pth,pvecback,pvecthermo),
+             pth->error_message,
+             pth->error_message);
+
+  
+
+  /* compute dmeff temperature \f$ T_\chi' = -2aH T_\chi + 2 R_{\chi,temp} * (T_b - T_\chi) \f$ 
+
+  if (z > pth->z_dmeff_decoupling){
+    dy[pth->index_ti_Tdm] = -a*H*y[pth->index_ti_Tdm];
+  } else {
+    dy[pth->index_ti_Tdm] = -2.*a*H*y[pth->index_ti_Tdm];
+    dy[pth->index_ti_Tdm] += 2.*pvecthermo[pth->index_th_dkappaT_dmeff] * (pvecthermo[pth->index_th_Tb] - y[pth->index_ti_Tdm]);
+  }
+  END WENDY REMOVAL */
+  
+  /* ADDED BY WENDY 
+  * Compute DMEFF temperature T_\chi' = -2aH T_\chi + 2 R_{\chi,temp} * (T_nu - T_\chi).
+  * First compute neutrino temperature.*/
+
+  T_ur = pow(4./11.,1./3.)*pba->T_cmb * (1+z); 
+
+  if (z > pth->z_dmeff_decoupling){
+    dy[pth->index_ti_Tdm] = -a*H*y[pth->index_ti_Tdm];
+  } else {
+    dy[pth->index_ti_Tdm] = -2.*a*H*y[pth->index_ti_Tdm];
+    dy[pth->index_ti_Tdm] += 2.*(4./3.*pvecback[pba->index_bg_rho_ur]/pvecback[pba->index_bg_rho_nudm])*pvecthermo[pth->index_th_dmu_urDM] * (T_ur - y[pth->index_ti_Tdm]);
   }
 
+
+  /* Also fill in c^2 for dmeff. */
+  /* pvecthermo[pth->index_th_cdmeff2] = _k_B_/(pba->m_dmeff*_c_*_c_) * (Tdmeff - dTdmeff/(3.*a*H)); Removed by WENDY */
+  pvecthermo[pth->index_th_cdmeff2] = _k_B_/(pba->m_dmeff*_c_*_c_) * (y[pth->index_ti_Tdm] - dy[pth->index_ti_Tdm]/(3.*a*H));
 
   return _SUCCESS_;
 }
 
 /**
- * Check if the initial integration time and spacing needs adjusting, for example for interacting dark matter
+ *  This function integrates to find the dmeff temperature.
+ *  It is a good approximation when baryons are tightly coupled
+ *  to photons (before recombination). Beyond that, these values
+ *  should not be used. Results are saved to background structure.
  *
- * @param ppr   Input: pointer to precision structure
- * @param pba   Input: pointer to background structure
- * @param pth   Input: pointer to thermo structure
- * @param ptw   Input/Output: pointer to thermo workspace
- * @return the error status
+ * @param ppr Input: precision structure
+ * @param pba Input/Output: background structure
+ * @param pth Input/Output: thermodynamics structure
  */
+
+int thermodynamics_dmeff_temperature(struct precision *ppr,
+                                     struct background *pba,
+                                     struct thermo *pth){
+
+  struct generic_integrator_workspace gi;
+  growTable gTable;
+  double * pData;
+
+  struct thermodynamics_parameters_and_workspace tpaw;
+  double * pvecback;
+  double * pvecthermo;
+  double * pvecdmeff_integration;
+  double * pvecdmeff_derivs;
+  int last_index;
+
+  int index_ti, index_tau, index_bg;
+  double tau_start, tau_end;
+  int tt_size_check;
+
+  double a,H,tau;
+
+  /* Allocate memory. */
+  class_alloc(pvecback,  pba->bg_size*sizeof(double),pth->error_message);
+  class_alloc(pvecthermo,pth->th_size*sizeof(double),pth->error_message);
+  class_alloc(pvecdmeff_integration,pth->ti_size*sizeof(double),pth->error_message);
+  class_alloc(pvecdmeff_derivs,     pth->ti_size*sizeof(double),pth->error_message);
+
+  tpaw.pba = pba;
+  tpaw.pth = pth;
+  tpaw.ppr = ppr;
+  tpaw.pvecback = pvecback;
+  tpaw.pvecthermo = pvecthermo;
+
+  /* Create spline for thermodynamics table. */
+  class_call(array_spline_table_lines(pth->z_table,
+                                      pth->tt_size,
+                                      pth->thermodynamics_table,
+                                      pth->th_size,
+                                      pth->d2thermodynamics_dz2_table,
+                                      _SPLINE_EST_DERIV_,
+                                      pth->error_message),
+             pth->error_message,
+             pth->error_message);
+
+  /* Initialize integrator (tau is not integrated). */
+  class_call(initialize_generic_integrator((pth->ti_size-1),&gi),
+             gi.error_message,
+             pth->error_message);
+  class_call(gt_init(&gTable),
+             gTable.error_message,
+             pth->error_message);
+
+  /* Set initial condition for integration. */
+  a = pba->background_table[pba->index_bg_a];
+  pvecdmeff_integration[pth->index_ti_Tdm] = pba->T_cmb / a;
+  pvecdmeff_integration[pth->index_ti_tau] = pba->tau_table[0];
+  tau_end = pvecdmeff_integration[pth->index_ti_tau];
+  tt_size_check = 0;
+
+  /** - loop over integration steps (use same steps as background) */
+  for(index_tau=0; index_tau < pba->bt_size-1; index_tau++){
+    tau_start = tau_end;
+    tau_end   = pba->tau_table[index_tau+1];
+
+    /* -> save data in growTable */
+    class_call(gt_add(&gTable,_GT_END_,(void *) pvecdmeff_integration,sizeof(double)*pth->ti_size),
+               gTable.error_message,
+               pth->error_message);
+    tt_size_check++;
+
+    /* -> perform one step */
+    class_call(generic_integrator(thermodynamics_dmeff_derivs,
+                                  tau_start,
+                                  tau_end,
+                                  pvecdmeff_integration,
+                                  &tpaw,
+                                  ppr->tol_Tdmeff_integration,
+                                  ppr->smallest_allowed_variation,
+                                  &gi),
+               gi.error_message,
+               pth->error_message);
+
+    /* -> store value of tau */
+    pvecdmeff_integration[pth->index_ti_tau]=tau_end;
+
+    /* BEGIN REMOVE BY WENDY
+    /* -> Test when Hubble rate surpasses 1/100 of the rate of dmeff interactions,
+       and set decoupling to this value. **/
+    /*
+    if(pth->z_dmeff_decoupling < 0.0){
+      a = pvecback[pba->index_bg_a];
+      H = pvecback[pba->index_bg_H];
+      if(a*H > pvecthermo[pth->index_th_dkappaT_dmeff]/100.){
+        pth->z_dmeff_decoupling = 1./a - 1.;
+      }
+    }
+    /*END REMOVE BY WENDY */
+
+    /* ADDED BY WENDY
+    -> Test when Hubble rate surpasses 1/100 of the rate of dmeff interactions,
+       and set decoupling to this value. **/
+    if(pth->z_dmeff_decoupling < 0.0){
+      a = pvecback[pba->index_bg_a];
+      H = pvecback[pba->index_bg_H];
+      if(a*H > (4./3.*pvecback[pba->index_bg_rho_ur]/pvecback[pba->index_bg_rho_nudm])*pvecthermo[pth->index_th_dmu_urDM]/a){
+        pth->z_dmeff_decoupling = 1./a - 1.;
+      }
+    }
+    /* End Added by Wendy */
+
+
+  } // end loop
+
+  /** - save last data in growTable with gt_add() */
+  class_call(gt_add(&gTable,_GT_END_,(void *) pvecdmeff_integration,sizeof(double)*pth->ti_size),
+             gTable.error_message,
+             pth->error_message);
+  tt_size_check++;
+
+  class_test(tt_size_check != pba->bt_size,
+             pth->error_message,
+             "DMeff: Tdmeff size %d should be size %d\n",tt_size_check,pba->bt_size);
+
+  /* integration finished */
+
+  /** - clean up generic integrator with cleanup_generic_integrator() */
+  class_call(cleanup_generic_integrator(&gi),
+             gi.error_message,
+             pth->error_message);
+
+  /** - retrieve data stored in the growTable with gt_getPtr() */
+  class_call(gt_getPtr(&gTable,(void**)&pData),
+             gTable.error_message,
+             pth->error_message);
+
+  /** - extract integration results and store Tdmeff in background table */
+  for (index_tau=0; index_tau < pba->bt_size; index_tau++) {
+    tau = pba->tau_table[index_tau];
+    // derivatives not needed, but this will fill pvecthermo appropriately
+    pvecdmeff_integration[pth->index_ti_tau] = tau;
+    pvecdmeff_integration[pth->index_ti_Tdm] = pData[index_tau*pth->ti_size+pth->index_ti_Tdm];
+
+    class_call(thermodynamics_dmeff_derivs(tau, pvecdmeff_integration, pvecdmeff_derivs, &tpaw, pth->error_message),
+               pth->error_message,
+               pth->error_message);
+
+    pba->background_table[index_tau*pba->bg_size+pba->index_bg_Tdmeff]        = pvecthermo[pth->index_th_Tdmeff];
+    /*pba->background_table[index_tau*pba->bg_size+pba->index_bg_dkappa_dmeff]  = pvecthermo[pth->index_th_dkappa_dmeff];
+    pba->background_table[index_tau*pba->bg_size+pba->index_bg_dkappaT_dmeff] = pvecthermo[pth->index_th_dkappaT_dmeff];  DELETED by WENDY... Neutrino Scattering interaction rate has already been outputted*/
+    pba->background_table[index_tau*pba->bg_size+pba->index_bg_cdmeff2]       = pvecthermo[pth->index_th_cdmeff2];
+  }
+
+  /* Recreate background table of derivatives */
+  class_call(array_spline_table_lines(pba->tau_table,
+                                      pba->bt_size,
+                                      pba->background_table,
+                                      pba->bg_size,
+                                      pba->d2background_dtau2_table,
+                                      _SPLINE_EST_DERIV_,
+                                      pth->error_message),
+             pth->error_message,
+             pth->error_message);
+
+
+  /* fill missing thermo quantities */
+  for (index_tau=0; index_tau < pth->tt_size; index_tau++){
+    class_call(background_tau_of_z(pba,
+                                   pth->z_table[index_tau],
+                                   &tau),
+               pba->error_message,
+               pth->error_message);
+
+    class_call(background_at_tau(pba,
+                                 tau,
+                                 pba->normal_info,
+                                 pba->inter_normal,
+                                 &last_index,
+                                 pvecback),
+               pba->error_message,
+               pth->error_message);
+
+    pvecthermo[pth->index_th_Tdmeff] = pvecback[pba->index_bg_Tdmeff];
+    /* pvecthermo[pth->index_th_Tb]     = pth->thermodynamics_table[index_tau*pth->th_size+pth->index_th_Tb];
+    pvecthermo[pth->index_th_dTb]    = pth->thermodynamics_table[index_tau*pth->th_size+pth->index_th_dTb];
+    pvecthermo[pth->index_th_xe]     = pth->thermodynamics_table[index_tau*pth->th_size+pth->index_th_xe]; DELETED BY WENDY*/
+    /*class_call(thermodynamics_dmeff_rate(pba,pth,pvecback,pvecthermo),
+               pth->error_message,
+               pth->error_message); DELETED BY WENDY*/
+    pth->thermodynamics_table[index_tau*pth->th_size+pth->index_th_Tdmeff]  = pvecthermo[pth->index_th_Tdmeff];
+    /*pth->thermodynamics_table[index_tau*pth->th_size+pth->index_th_dkappa_dmeff]  = pvecthermo[pth->index_th_dkappa_dmeff];
+    pth->thermodynamics_table[index_tau*pth->th_size+pth->index_th_ddkappa_dmeff] = pvecthermo[pth->index_th_ddkappa_dmeff];
+    pth->thermodynamics_table[index_tau*pth->th_size+pth->index_th_dkappaT_dmeff] = pvecthermo[pth->index_th_dkappaT_dmeff]; DELTED BY WENDY*/
+    pth->thermodynamics_table[index_tau*pth->th_size+pth->index_th_cdmeff2] = pvecthermo[pth->index_th_cdmeff2];
+  }
+
+  /* Free memory. */
+  class_call(gt_free(&gTable),
+             gTable.error_message,
+             pth->error_message);
+  free(pvecback);
+  free(pvecthermo);
+  free(pvecdmeff_integration);
+  free(pvecdmeff_derivs);
+
+  return _SUCCESS_;
+}
+

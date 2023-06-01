@@ -924,6 +924,13 @@ int input_read_parameters(
 
   Omega_tot += pba->Omega0_nudm;
 
+  /* m_dmeff (dmeff) in kg - Mass of DM particle (nudm) scattering with massless neutrino (ur) - ADDED BY WENDY */
+    class_call(parser_read_double(pfc,"m_dmeff",&param1,&flag1,errmsg),
+               errmsg,
+               errmsg);
+    if (flag1 == _TRUE_)
+      pba->m_dmeff = param1 * 1.0e9 * _eV_ / (_c_ * _c_); // convert GeV to kg
+
   /** - Omega_0_dcdmdr (DCDM) */
   class_call(parser_read_double(pfc,"Omega_dcdmdr",&param1,&flag1,errmsg),
              errmsg,
@@ -1021,8 +1028,6 @@ int input_read_parameters(
       }
       pba->has_ncdm_dm_interactions = _FALSE_;
     }
-
-    class_read_double("m_idm",pth->m_idm);   //Wendy Added
 
     /* Read Omega of each ncdm species: */
     class_read_list_of_doubles_or_default("Omega_ncdm",pba->Omega0_ncdm,0.0,N_ncdm);
@@ -3086,6 +3091,7 @@ int input_default_params(
   pba->Omega0_cdm = 0.12038/pow(pba->h,2);
   pba->Omega0_nudm = 0.;
   pba->f_nudm=0.;
+  pba->m_dmeff = 1.0 * 1.0e9 * _eV_ / (_c_ * _c_); /* ADDED BY WENDY */
   pba->Omega0_dcdmdr = 0.0;
   pba->Omega0_dcdm = 0.0;
   pba->Gamma_dcdm = 0.0;

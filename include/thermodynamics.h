@@ -154,7 +154,6 @@ struct thermo
   double u_urDM_0;            /** DM-ur scattering cross section normalized to the Thomson crosssection and a DM mass of 100 GeV at T=T_0 */
   double n_urDM;             /** temperature dependance of the cross section: sigma ~ T^n_urDM*/
   short has_coupling_urDM;   /** flag to indicate weather the scattering is present */
-  double m_idm;          /**< dark matter mass for idm added by Wendy*/
   //@}
 
   /** @name - all indices for the vector of thermodynamical (=th) quantities stored in table */
@@ -179,8 +178,6 @@ struct thermo
   int index_th_r_d;           /**< simple analytic approximation to the photon comoving damping scale */
   int index_th_dmu_urDM;       /**< rate for DM-ur scattering */
   int th_size;                /**< size of thermodynamics vector */
-  int index_th_T_nudm;       // Added by Wendy
-  int index_th_c2_nudm;      // Added by Wendy
 
   //@}
 
@@ -270,6 +267,16 @@ struct thermo
   ErrorMsg error_message; /**< zone for writing error messages */
 
   //@}
+
+  /* DMEFF (massless neutrino) related quantities - Added by WENDY */
+  int index_th_Tdmeff;   /**< dmeff temperature \f$ T_{dmeff} \f$ */
+  int index_th_cdmeff2;  /**< dmeff speed of sound squared \f$ c_{dmeff}^2 \f$ */
+  int index_ti_Tdm;
+  int index_ti_tau;
+  int ti_size;   /* number of integration indices */
+
+  double z_dmeff_decoupling; /* redshift at which Tdmeff decouples from massless neutrino fluid (relevant for dmeff_npow>=0) */
+  double m_dmeff;
 
 };
 
@@ -501,8 +508,7 @@ extern "C" {
 			  );
 
   int thermodynamics_indices(
-			     struct background * pba,
-           struct thermo * pthermo,
+			     struct thermo * pthermo,
 			     struct recombination * preco,
 			     struct reionization * preio
 			     );
@@ -619,6 +625,16 @@ extern "C" {
                           double after,
                           double width,
                           double * result);
+
+  int thermodynamics_dmeff_temperature(struct precision *ppr,
+                                       struct background *pba,
+                                       struct thermo *pth);
+
+  int thermodynamics_dmeff_derivs(double tau,
+                                  double *y,
+                                  double *dy,
+                                  void * parameters_and_workspace,
+                                  ErrorMsg error_message);
 
 #ifdef __cplusplus
 }

@@ -272,6 +272,11 @@ class_precision_parameter(neglect_CMB_sources_below_visibility,double,1.0e-3)
  */
 class_type_parameter(evolver,int,enum evolver_type,ndf15)
 
+/**
+ * controls precision of dmeff (nudm) temperature integration - ADDED BY WENDY
+ */
+class_precision_parameter(tol_Tdmeff_integration,double,1.0e-2)
+
 /*
  * Primordial parameters
  * */
