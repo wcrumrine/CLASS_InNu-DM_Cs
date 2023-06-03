@@ -470,11 +470,13 @@ struct thermodynamics_parameters_and_workspace {
 
   /* structures containing fixed input parameters (indices, ...) */
   struct background * pba;
+  struct thermodynamics * pth; /* ADDED BY WENDY */
   struct precision * ppr;
   struct recombination * preco;
 
   /* workspace */
   double * pvecback;
+  double * pvecthermo; /* ADDED BY WENDY */
 
 };
 
