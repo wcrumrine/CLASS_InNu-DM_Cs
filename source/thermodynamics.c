@@ -445,7 +445,6 @@ int thermodynamics_init(
                pth->error_message);
   }
 
-  /*pth->z_dmeff_decoupling = -1.0;
   /** - store initial value of conformal time in the structure */
 
   pth->tau_ini = tau_table[pth->tt_size-1];
@@ -3999,7 +3998,7 @@ int thermodynamics_dmeff_derivs(double tau,
   double * pvecback;
   double * pvecthermo;
   double a,H,z;
-  double T_ur;
+  double T_ur, dmu_urDM;
   int last_index;
 
   ptpaw = parameters_and_workspace;
@@ -4047,6 +4046,8 @@ int thermodynamics_dmeff_derivs(double tau,
   END WENDY REMOVAL */
 
   pvecthermo[pth->index_th_Tdmeff] = y[pth->index_ti_Tdm];
+  printf(" -> Tdmeff=%e\n",pvecthermo[pth->index_th_Tdmeff]); 
+
 
   /* BEGIN WENDY REMOVAL
 
@@ -4073,19 +4074,21 @@ int thermodynamics_dmeff_derivs(double tau,
   * First compute neutrino temperature.*/
 
   T_ur = pow(4./11.,1./3.)*pba->T_cmb * (1+z); 
+  dmu_urDM = pow(1.+z, 2.+pth->n_urDM)*pth->u_urDM_0*3.*pba->H0*pba->H0/8./_PI_/_G_*pba->Omega0_nudm*pow(_c_,4)*_sigma_/1.e11/_eV_/_Mpc_over_m_;
+
 
   if (z > pth->z_dmeff_decoupling){
     dy[pth->index_ti_Tdm] = -a*H*y[pth->index_ti_Tdm];
   } else {
     dy[pth->index_ti_Tdm] = -2.*a*H*y[pth->index_ti_Tdm];
-    dy[pth->index_ti_Tdm] += 2.*(4./3.*pvecback[pba->index_bg_rho_ur]/pvecback[pba->index_bg_rho_nudm])*pvecthermo[pth->index_th_dmu_urDM] * (T_ur - y[pth->index_ti_Tdm]);
+    dy[pth->index_ti_Tdm] += 2.*(4./3.*pvecback[pba->index_bg_rho_ur]/pvecback[pba->index_bg_rho_nudm])*dmu_urDM * (T_ur - y[pth->index_ti_Tdm]);
   }
 
 
   /* Also fill in c^2 for dmeff. */
   /* pvecthermo[pth->index_th_cdmeff2] = _k_B_/(pba->m_dmeff*_c_*_c_) * (Tdmeff - dTdmeff/(3.*a*H)); Removed by WENDY */
   pvecthermo[pth->index_th_cdmeff2] = _k_B_/(pba->m_dmeff*_c_*_c_) * (y[pth->index_ti_Tdm] - dy[pth->index_ti_Tdm]/(3.*a*H));
-
+  printf(" -> Sound Speed=%e\n",pvecthermo[pth->index_th_cdmeff2]);
   return _SUCCESS_;
 }
 
@@ -4119,7 +4122,7 @@ int thermodynamics_dmeff_temperature(struct precision *ppr,
   double tau_start, tau_end;
   int tt_size_check;
 
-  double a,H,tau;
+  double a,H,tau,dmu_urDM,z;
 
   /* Allocate memory. */
   class_alloc(pvecback,  pba->bg_size*sizeof(double),pth->error_message);
@@ -4204,18 +4207,19 @@ int thermodynamics_dmeff_temperature(struct precision *ppr,
     if(pth->z_dmeff_decoupling < 0.0){
       a = pvecback[pba->index_bg_a];
       H = pvecback[pba->index_bg_H];
-      if(a*H > (4./3.*pvecback[pba->index_bg_rho_ur]/pvecback[pba->index_bg_rho_nudm])*pvecthermo[pth->index_th_dmu_urDM]/a){
+      z = 1./a - 1 ;
+      dmu_urDM = pow(1.+z, 2.+pth->n_urDM)*pth->u_urDM_0*3.*pba->H0*pba->H0/8./_PI_/_G_*pba->Omega0_nudm*pow(_c_,4)*_sigma_/1.e11/_eV_/_Mpc_over_m_;
+      /*printf(" -> z=%e\n",z);
+      printf(" -> dmu_urDM=%e\n",dmu_urDM); 
+      printf(" -> aH=%e\n",a*H);
+      printf(" -> Gamma=%e\n",(4./3.*pvecback[pba->index_bg_rho_ur]/pvecback[pba->index_bg_rho_nudm])*dmu_urDM/a); */
+
+      if(a*H > (4./3.*pvecback[pba->index_bg_rho_ur]/pvecback[pba->index_bg_rho_nudm])*dmu_urDM/a){
         pth->z_dmeff_decoupling = 1./a - 1.;
       }
     }
 
-    printf(" -> H = %e\n",H);
-    printf(" -> a = %e\n",a);
-    printf(" -> rho_ur = %e\n",pvecback[pba->index_bg_rho_ur]);
-    printf(" -> rho_nudm = %e\n",pvecback[pba->index_bg_rho_nudm]);
-    printf(" -> dmu_urDM= %e\n",pvecthermo[pth->index_th_dmu_urDM]);
-
-
+      
     /* End Added by Wendy */
 
 
