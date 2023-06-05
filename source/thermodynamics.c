@@ -445,6 +445,7 @@ int thermodynamics_init(
                pth->error_message);
   }
 
+  /*pth->z_dmeff_decoupling = -1.0;
   /** - store initial value of conformal time in the structure */
 
   pth->tau_ini = tau_table[pth->tt_size-1];
@@ -4207,6 +4208,14 @@ int thermodynamics_dmeff_temperature(struct precision *ppr,
         pth->z_dmeff_decoupling = 1./a - 1.;
       }
     }
+
+    printf(" -> H = %e\n",H);
+    printf(" -> a = %e\n",a);
+    printf(" -> rho_ur = %e\n",pvecback[pba->index_bg_rho_ur]);
+    printf(" -> rho_nudm = %e\n",pvecback[pba->index_bg_rho_nudm]);
+    printf(" -> dmu_urDM= %e\n",pvecthermo[pth->index_th_dmu_urDM]);
+
+
     /* End Added by Wendy */
 
 
