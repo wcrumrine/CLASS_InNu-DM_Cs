@@ -1064,20 +1064,24 @@ int thermodynamics_indices(
 
 
   /* end of indices */
-  pth->th_size = index;
+  /*pth->th_size = index; REMOVED BY WENDY */
 
 
   /** - initialization of indices for dmeff temperature integration  - ADDED BY WENDY*/
   if(pth->has_coupling_urDM==_TRUE_){
-    index = 0;
+    /*index = 0;*/
 
     pth->index_ti_Tdm = index;
     index++;
     pth->index_ti_tau = index; // must be the last index
     index++;
 
-    pth->ti_size = index;
+    /*pth->ti_size = index; REMOVED BY WENDY */
+    pth->ti_size = 2;
   }
+
+  /* end of indices ADDED BY WENDY*/
+  pth->th_size = index; 
 
 
   /** - initialization of all indices and flags in recombination structure */
