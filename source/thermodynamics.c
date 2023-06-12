@@ -296,6 +296,7 @@ int thermodynamics_init(
   double g_max;
   int index_tau_max;
   double dkappa_ini;
+  double tau_rec;
 
   if (pth->thermodynamics_verbose > 0)
     printf("Computing thermodynamics");
@@ -449,6 +450,20 @@ int thermodynamics_init(
 
   pth->tau_ini = tau_table[pth->tt_size-1];
 
+  /* ADDED BY WENDY - OUTPUT a, H and dkappa at redshift of recombination*/ /*if(tau_table[index_tau] = pth->tau_rec){*/
+
+  tau_rec = 2.831790e+02;
+  
+
+  class_call(background_at_tau(pba,tau_rec, pba->long_info, pba->inter_normal, &last_index_back, pvecback),
+             pba->error_message,
+             pth->error_message);
+
+  printf(" -> a =%e\n",pvecback[pba->index_bg_a]); /* Added by Wendy */
+  printf(" -> H =%e\n",pvecback[pba->index_bg_H]);
+  printf(" -> tau_rec =%e\n",pth->tau_rec);
+  printf(" -> dkappa =%e\n",pth->thermodynamics_table[pth->index_th_dkappa]);
+
   /** - Initialize dmeff - ADDED BY WENDY */
 
   if (pth->has_coupling_urDM == _TRUE_){
@@ -487,6 +502,20 @@ int thermodynamics_init(
                pth->error_message);
   }
   /** End Changes by WENDY */
+
+  /* ADDED BY WENDY - OUTPUT a, H and dkappa at redshift of recombination*/ /*if(tau_table[index_tau] = pth->tau_rec){*/
+
+  tau_rec = 2.831790e+02;
+  
+
+  class_call(background_at_tau(pba,tau_rec, pba->long_info, pba->inter_normal, &last_index_back, pvecback),
+             pba->error_message,
+             pth->error_message);
+
+  printf(" -> a =%e\n",pvecback[pba->index_bg_a]); /* Added by Wendy */
+  printf(" -> H =%e\n",pvecback[pba->index_bg_H]);
+  printf(" -> tau_rec =%e\n",pth->tau_rec);
+  printf(" -> dkappa =%e\n",pth->thermodynamics_table[pth->index_th_dkappa]);
 
   /** - fill missing columns (quantities not computed previously but related) */
 
@@ -1064,24 +1093,20 @@ int thermodynamics_indices(
 
 
   /* end of indices */
-  /*pth->th_size = index; REMOVED BY WENDY */
+  pth->th_size = index;
 
 
   /** - initialization of indices for dmeff temperature integration  - ADDED BY WENDY*/
   if(pth->has_coupling_urDM==_TRUE_){
-    /*index = 0;*/
+    index = 0;
 
     pth->index_ti_Tdm = index;
     index++;
     pth->index_ti_tau = index; // must be the last index
     index++;
 
-    /*pth->ti_size = index; REMOVED BY WENDY */
-    pth->ti_size = 2;
+    pth->ti_size = index;
   }
-
-  /* end of indices ADDED BY WENDY*/
-  pth->th_size = index; 
 
 
   /** - initialization of all indices and flags in recombination structure */
@@ -4161,6 +4186,7 @@ int thermodynamics_dmeff_temperature(struct precision *ppr,
 
   /* Set initial condition for integration. */
   a = pba->background_table[pba->index_bg_a];
+  printf(" -> a =%e\n",a); /* Added by Wendy */
   pvecdmeff_integration[pth->index_ti_Tdm] = pba->T_cmb / a;
   pvecdmeff_integration[pth->index_ti_tau] = pba->tau_table[0];
   tau_end = pvecdmeff_integration[pth->index_ti_tau];

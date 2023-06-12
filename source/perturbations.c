@@ -1493,6 +1493,11 @@ int perturb_timesampling_for_sources(
                pth->error_message,
                ppt->error_message);
 
+    printf(" -> a =%e\n",pvecback[pba->index_bg_a]); /* Added by Wendy */
+    printf(" -> H =%e\n",pvecback[pba->index_bg_H]);
+    printf(" -> index_th_dkappa =%e\n",pvecthermo[pth->index_th_dkappa]);
+    printf(" -> tau_rec =%e\n",tau_upper);
+
     class_test(pvecback[pba->index_bg_a]*
                pvecback[pba->index_bg_H]/
                pvecthermo[pth->index_th_dkappa] <
