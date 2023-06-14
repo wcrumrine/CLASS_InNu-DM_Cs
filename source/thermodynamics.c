@@ -4075,7 +4075,6 @@ int thermodynamics_dmeff_derivs(double tau,
   END WENDY REMOVAL */
 
   pvecthermo[pth->index_th_Tdmeff] = y[pth->index_ti_Tdm];
-  printf(" -> Tdmeff=%e\n",pvecthermo[pth->index_th_Tdmeff]); 
 
 
   /* BEGIN WENDY REMOVAL
@@ -4117,7 +4116,7 @@ int thermodynamics_dmeff_derivs(double tau,
   /* Also fill in c^2 for dmeff. */
   /* pvecthermo[pth->index_th_cdmeff2] = _k_B_/(pba->m_dmeff*_c_*_c_) * (Tdmeff - dTdmeff/(3.*a*H)); Removed by WENDY */
   pvecthermo[pth->index_th_cdmeff2] = _k_B_/(pba->m_dmeff*_c_*_c_) * (y[pth->index_ti_Tdm] - dy[pth->index_ti_Tdm]/(3.*a*H));
-  printf(" -> Sound Speed=%e\n",pvecthermo[pth->index_th_cdmeff2]);
+
   return _SUCCESS_;
 }
 
@@ -4150,8 +4149,11 @@ int thermodynamics_dmeff_temperature(struct precision *ppr,
   int index_ti, index_tau, index_bg;
   double tau_start, tau_end;
   int tt_size_check;
+  int last_index_back;
+  double tau_rec;
 
   double a,H,tau,dmu_urDM,z;
+  double Tdmeff, cdmeff2;
 
   /* Allocate memory. */
   class_alloc(pvecback,  pba->bg_size*sizeof(double),pth->error_message);
@@ -4186,7 +4188,9 @@ int thermodynamics_dmeff_temperature(struct precision *ppr,
 
   /* Set initial condition for integration. */
   a = pba->background_table[pba->index_bg_a];
-  printf(" -> a =%e\n",a); /* Added by Wendy */
+  Tdmeff = pba->background_table[pba->index_bg_Tdmeff];
+  cdmeff2 = pba->background_table[pba->index_bg_cdmeff2];
+
   pvecdmeff_integration[pth->index_ti_Tdm] = pba->T_cmb / a;
   pvecdmeff_integration[pth->index_ti_tau] = pba->tau_table[0];
   tau_end = pvecdmeff_integration[pth->index_ti_tau];
@@ -4279,10 +4283,16 @@ int thermodynamics_dmeff_temperature(struct precision *ppr,
 
   /** - extract integration results and store Tdmeff in background table */
   for (index_tau=0; index_tau < pba->bt_size; index_tau++) {
+    
+    /*printf(" -> tau_index_4283 =%e\n",tau_index); /* Added by Wendy */
+
     tau = pba->tau_table[index_tau];
+
     // derivatives not needed, but this will fill pvecthermo appropriately
     pvecdmeff_integration[pth->index_ti_tau] = tau;
     pvecdmeff_integration[pth->index_ti_Tdm] = pData[index_tau*pth->ti_size+pth->index_ti_Tdm];
+
+    /*printf(" -> tau_index_4290 =%e\n",tau_index); /* Added by Wendy */
 
     class_call(thermodynamics_dmeff_derivs(tau, pvecdmeff_integration, pvecdmeff_derivs, &tpaw, pth->error_message),
                pth->error_message,
@@ -4292,7 +4302,10 @@ int thermodynamics_dmeff_temperature(struct precision *ppr,
     /*pba->background_table[index_tau*pba->bg_size+pba->index_bg_dkappa_dmeff]  = pvecthermo[pth->index_th_dkappa_dmeff];
     pba->background_table[index_tau*pba->bg_size+pba->index_bg_dkappaT_dmeff] = pvecthermo[pth->index_th_dkappaT_dmeff];  DELETED by WENDY... Neutrino Scattering interaction rate has already been outputted*/
     pba->background_table[index_tau*pba->bg_size+pba->index_bg_cdmeff2]       = pvecthermo[pth->index_th_cdmeff2];
+
+    
   }
+
 
   /* Recreate background table of derivatives */
   class_call(array_spline_table_lines(pba->tau_table,

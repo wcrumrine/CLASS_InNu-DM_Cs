@@ -954,10 +954,10 @@ int background_indices(
   class_define_index(pba->index_bg_A_nudm1,pba->has_nudm,index_bg,pba->N_ncdm);
 
   /* - index for Tdmeff (temp of nudm, DM that interacts with massless neutrinos) - ADDED BY WENDY */
-  class_define_index(pba->index_bg_Tdmeff,pba->has_urdm_interactions,index_bg,1);
+  class_define_index(pba->index_bg_Tdmeff,pba->has_nudm,index_bg,1);
 
   /* - index for dmeff speed of sound squared (sound speed of nudm, DM that interacts with massless neutrinos) - ADDED BY WENDY */
-  class_define_index(pba->index_bg_cdmeff2,pba->has_urdm_interactions,index_bg,1);
+  class_define_index(pba->index_bg_cdmeff2,pba->has_nudm,index_bg,1);
 
   /* - index for dcdm */
   class_define_index(pba->index_bg_rho_dcdm,pba->has_dcdm,index_bg,1);
