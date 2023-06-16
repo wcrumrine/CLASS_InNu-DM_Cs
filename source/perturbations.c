@@ -8283,7 +8283,7 @@ double S_urDM;
           }
         }
         if(pth->has_coupling_urDM==_TRUE_ && ppw->approx[ppw->index_ap_rsa] == (int)rsa_off)
-	         dy[pv->index_pt_theta_nudm] += S_urDM*pvecthermo[pth->index_th_dmu_urDM]*(y[pv->index_pt_theta_ur]-y[pv->index_pt_theta_nudm]);
+	         dy[pv->index_pt_theta_nudm] += S_urDM*pvecthermo[pth->index_th_dmu_urDM]*(y[pv->index_pt_theta_ur]-y[pv->index_pt_theta_nudm]) + k2*pvecthermo[pth->index_th_cdmeff2]*y[pv->index_pt_delta_nudm]; /* Sound Speed term added by WENDY */
 
       }
     }
@@ -8431,8 +8431,7 @@ double S_urDM;
           -(1.-ppt->three_ceff2_ur)*a_prime_over_a*y[pv->index_pt_theta_ur];
 
         if(pth->has_coupling_urDM==_TRUE_)
-  	       dy[pv->index_pt_theta_ur] += pvecthermo[pth->index_th_dmu_urDM]*(y[pv->index_pt_theta_nudm]-y[pv->index_pt_theta_ur]);
-
+  	       dy[pv->index_pt_theta_ur] += pvecthermo[pth->index_th_dmu_urDM]*(y[pv->index_pt_theta_nudm]-y[pv->index_pt_theta_ur]) ;
         if(ppw->approx[ppw->index_ap_ufa] == (int)ufa_off) {
 
           /** - -----> exact ur shear */

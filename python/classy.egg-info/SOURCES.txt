@@ -2,6 +2,7 @@ README
 autosetup.py
 setup.py
 /Users/wendycrumrine/Desktop/Research/CLASS_InNu-DM/python/../python/classy.pyx
+/Users/wendycrumrine/Desktop/Research/CLASS_Neutrino_Sound_Speed_Versions/CLASS_DONE_Sound_Speed_Evolution_Mods/python/../python/classy.pyx
 classy.egg-info/PKG-INFO
 classy.egg-info/SOURCES.txt
 classy.egg-info/dependency_links.txt

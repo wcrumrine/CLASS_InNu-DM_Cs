@@ -4303,6 +4303,10 @@ int thermodynamics_dmeff_temperature(struct precision *ppr,
     pba->background_table[index_tau*pba->bg_size+pba->index_bg_dkappaT_dmeff] = pvecthermo[pth->index_th_dkappaT_dmeff];  DELETED by WENDY... Neutrino Scattering interaction rate has already been outputted*/
     pba->background_table[index_tau*pba->bg_size+pba->index_bg_cdmeff2]       = pvecthermo[pth->index_th_cdmeff2];
 
+    /*printf(" -> Tdmeff_background =%e\n",pba->background_table[index_tau*pba->bg_size+pba->index_bg_Tdmeff]);
+    printf(" -> cdmeff2_background =%e\n",pba->background_table[index_tau*pba->bg_size+pba->index_bg_cdmeff2]);*/
+
+
     
   }
 
@@ -4336,7 +4340,12 @@ int thermodynamics_dmeff_temperature(struct precision *ppr,
                pba->error_message,
                pth->error_message);
 
+    printf(" -> Tdmeff_thermo_1 =%e\n",pvecback[pba->index_bg_Tdmeff]);
+    printf(" -> cdmeff2_thermo_1=%e\n",pvecback[pba->index_bg_cdmeff2]);
+
     pvecthermo[pth->index_th_Tdmeff] = pvecback[pba->index_bg_Tdmeff];
+    pvecthermo[pth->index_th_cdmeff2] = pvecback[pba->index_bg_cdmeff2]; /* ADDED BY WENDY */
+
     /* pvecthermo[pth->index_th_Tb]     = pth->thermodynamics_table[index_tau*pth->th_size+pth->index_th_Tb];
     pvecthermo[pth->index_th_dTb]    = pth->thermodynamics_table[index_tau*pth->th_size+pth->index_th_dTb];
     pvecthermo[pth->index_th_xe]     = pth->thermodynamics_table[index_tau*pth->th_size+pth->index_th_xe]; DELETED BY WENDY*/
@@ -4348,6 +4357,10 @@ int thermodynamics_dmeff_temperature(struct precision *ppr,
     pth->thermodynamics_table[index_tau*pth->th_size+pth->index_th_ddkappa_dmeff] = pvecthermo[pth->index_th_ddkappa_dmeff];
     pth->thermodynamics_table[index_tau*pth->th_size+pth->index_th_dkappaT_dmeff] = pvecthermo[pth->index_th_dkappaT_dmeff]; DELTED BY WENDY*/
     pth->thermodynamics_table[index_tau*pth->th_size+pth->index_th_cdmeff2] = pvecthermo[pth->index_th_cdmeff2];
+
+    printf(" -> Tdmeff_thermo_2 =%e\n",pth->thermodynamics_table[index_tau*pth->th_size+pth->index_th_Tdmeff]);
+    printf(" -> cdmeff2_thermo_2 =%e\n",pth->thermodynamics_table[index_tau*pth->th_size+pth->index_th_cdmeff2]);
+
   }
 
   /* Free memory. */
