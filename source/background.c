@@ -2273,8 +2273,8 @@ int background_output_titles(struct background * pba,
       }
     }
   }
-  class_store_columntitle(titles,"T_dmeff",pba->has_urdm_interactions); /* Added by WENDY */
-  class_store_columntitle(titles,"cdmeff2",pba->has_urdm_interactions); /* Added by WENDY */
+  class_store_columntitle(titles,"T_dmeff",_TRUE_); /* Added by WENDY */
+  class_store_columntitle(titles,"cdmeff2",_TRUE_); /* Added by WENDY */
   class_store_columntitle(titles,"(.)rho_lambda",pba->has_lambda);
   class_store_columntitle(titles,"(.)rho_fld",pba->has_fld);
   class_store_columntitle(titles,"(.)w_fld",pba->has_fld);
@@ -2336,8 +2336,8 @@ int background_output_data(
         }
       }
     }
-    class_store_double(dataptr,pvecback[pba->index_bg_Tdmeff],pba->has_urdm_interactions,storeidx); /* ADDED BY WENDY */
-    class_store_double(dataptr,pvecback[pba->index_bg_cdmeff2],pba->has_urdm_interactions,storeidx); /* ADDED BY WENDY */
+    class_store_double(dataptr,pvecback[pba->index_bg_Tdmeff],_TRUE_,storeidx); /* ADDED BY WENDY */
+    class_store_double(dataptr,pvecback[pba->index_bg_cdmeff2],_TRUE_,storeidx); /* ADDED BY WENDY */
     class_store_double(dataptr,pvecback[pba->index_bg_rho_lambda],pba->has_lambda,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_rho_fld],pba->has_fld,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_w_fld],pba->has_fld,storeidx);

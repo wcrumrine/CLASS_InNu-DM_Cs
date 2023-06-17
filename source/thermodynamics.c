@@ -4248,7 +4248,7 @@ int thermodynamics_dmeff_temperature(struct precision *ppr,
       printf(" -> aH=%e\n",a*H);
       printf(" -> Gamma=%e\n",(4./3.*pvecback[pba->index_bg_rho_ur]/pvecback[pba->index_bg_rho_nudm])*dmu_urDM/a); */
 
-      if(a*H > (4./3.*pvecback[pba->index_bg_rho_ur]/pvecback[pba->index_bg_rho_nudm])*dmu_urDM/a){
+      if(a*H > (4./3.*pvecback[pba->index_bg_rho_ur]/pvecback[pba->index_bg_rho_nudm])*dmu_urDM){
         pth->z_dmeff_decoupling = 1./a - 1.;
       }
     }
